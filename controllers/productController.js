@@ -1,4 +1,5 @@
 const Product = require("../models/productModel");
+const { RESPONSES } = require("../utils/responses");
 
 // CREATE PRODUCT
 const createProduct = async (req, res) => {
@@ -6,7 +7,7 @@ const createProduct = async (req, res) => {
     const { name, price, description } = req.body;
 
     if (!name || !price) {
-      return res.status(400).json({ message: "Name and price required" });
+      return res.status(RESPONSES.VALIDATION_ERROR.code).json(RESPONSES.VALIDATION_ERROR);
     }
 
     const product = await Product.create({
@@ -15,13 +16,10 @@ const createProduct = async (req, res) => {
       description,
     });
 
-    res.status(201).json({
-      message: "Product created successfully",
-      product,
-    });
+    res.status(RESPONSES.PRODUCT_CREATED.code).json(RESPONSES.PRODUCT_CREATED);
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
   }
 };
 

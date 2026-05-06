@@ -1,5 +1,6 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
+const { RESPONSES } = require("../utils/responses");
 
 const loginUser = async (req, res) => {
   try {
@@ -8,13 +9,13 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(RESPONSES.USER_NOT_FOUND.code).json(RESPONSES.USER_NOT_FOUND);
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(RESPONSES.INVALID_CREDENTIALS.code).json(RESPONSES.INVALID_CREDENTIALS);
     }
 
     // 🔥 SESSION CREATE
@@ -30,7 +31,7 @@ const loginUser = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
   }
 };
 
@@ -44,7 +45,7 @@ const getProfile = (req, res) => {
 const logoutUser = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      return res.status(500).json({ message: "Logout failed" });
+      return res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
     }
     res.clearCookie("connect.sid");
     res.json({ message: "Logged out successfully" });
@@ -57,7 +58,7 @@ const createUser = async (req, res) => {
 
     // validation
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(RESPONSES.VALIDATION_ERROR.code).json(RESPONSES.VALIDATION_ERROR);
     }
 
     // check if user exists
@@ -65,7 +66,7 @@ const createUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(RESPONSES.VALIDATION_ERROR.code).json(RESPONSES.VALIDATION_ERROR);
     }
 
     // create user
@@ -75,13 +76,10 @@ const createUser = async (req, res) => {
       password: hashedPassword,
     });
 
-    res.status(201).json({
-      message: "User created successfully",
-      user,
-    });
+    res.status(RESPONSES.USER_CREATED.code).json(RESPONSES.USER_CREATED);
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
   }
 };
 

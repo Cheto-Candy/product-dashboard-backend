@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const validateRequest = require("../middleware/validateRequest");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const {
@@ -7,10 +8,14 @@ const {
   getProducts
 } = require("../controllers/productController");
 
+const { productSchema } = require("../validators/productSchema");
+
+
+
 // 🔐 protected route (only logged-in users)
-router.post("/", authMiddleware, createProduct);
+router.post("/", validateRequest(productSchema), authMiddleware, createProduct);
 
 // public route
-router.get("/",authMiddleware, getProducts);
+router.get("/", authMiddleware, getProducts);
 
 module.exports = router;

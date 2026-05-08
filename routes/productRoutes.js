@@ -3,19 +3,22 @@ const router = express.Router();
 const validateRequest = require("../middleware/validateRequest");
 
 const authMiddleware = require("../middleware/authMiddleware");
-const {
-  createProduct,
-  getProducts
-} = require("../controllers/productController");
+// const  = require("../controllers/productController");
+const controller = require("../controllers/productController");
+
 
 const { productSchema } = require("../validators/productSchema");
 
 
 
-// 🔐 protected route (only logged-in users)
-router.post("/", validateRequest(productSchema), authMiddleware, createProduct);
+// CRUD
+router.post("/",validateRequest(productSchema), authMiddleware, controller.createProduct);
+router.get("/",authMiddleware, controller.getProducts);
+router.get("/:id",authMiddleware, controller.getProductById);
+router.put("/:id",validateRequest(productSchema), authMiddleware, controller.updateProduct);
+router.delete("/:id", authMiddleware, controller.deleteProduct);
 
-// public route
-router.get("/", authMiddleware, getProducts);
+// BULK DELETE (CHUNK)
+router.delete("/bulk", authMiddleware, controller.deleteProductsInChunks);
 
 module.exports = router;

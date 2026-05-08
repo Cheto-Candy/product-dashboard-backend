@@ -1,7 +1,43 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { RESPONSES } = require("../utils/responses");
 
+// REGISTER
+const createUser = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(RESPONSES.VALIDATION_ERROR.code).json(RESPONSES.VALIDATION_ERROR);
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+
+    if (existingUser) {
+      return res.status(RESPONSES.VALIDATION_ERROR.code).json({
+        message: "User already exists"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    res.status(201).json({
+      message: "User created successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// LOGIN (JWT)
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -9,80 +45,51 @@ const loginUser = async (req, res) => {
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(RESPONSES.USER_NOT_FOUND.code).json(RESPONSES.USER_NOT_FOUND);
+      return res.status(404).json({ message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(RESPONSES.INVALID_CREDENTIALS.code).json(RESPONSES.INVALID_CREDENTIALS);
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 🔥 SESSION CREATE
-    req.session.user = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    };
+    // 🔥 CREATE TOKEN
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     res.json({
-      message: "Login successful (session created)",
-      user: req.session.user,
+      message: "Login successful",
+      token,
     });
 
   } catch (error) {
-    res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-const getProfile = (req, res) => {
-  res.json({
-    message: "Profile data",
-    user: req.user
-  });
-};
-
-const logoutUser = (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
-    }
-    res.clearCookie("connect.sid");
-    res.json({ message: "Logged out successfully" });
-  });
-};
-
-const createUser = async (req, res) => {
+// PROFILE (JWT protected)
+const getProfile = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-
-    // validation
-    if (!name || !email || !password) {
-      return res.status(RESPONSES.VALIDATION_ERROR.code).json(RESPONSES.VALIDATION_ERROR);
-    }
-
-    // check if user exists
-    const existingUser = await User.findOne({ where: { email } });
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    if (existingUser) {
-      return res.status(RESPONSES.VALIDATION_ERROR.code).json(RESPONSES.VALIDATION_ERROR);
-    }
-
-    // create user
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
+    res.json({
+      message: "Profile data",
+      user: req.user
     });
-
-    res.status(RESPONSES.USER_CREATED.code).json(RESPONSES.USER_CREATED);
-
   } catch (error) {
-    res.status(RESPONSES.SERVER_ERROR.code).json(RESPONSES.SERVER_ERROR);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+module.exports = {
+  createUser,
+  loginUser,
+  getProfile,
 
-
-module.exports = { createUser, loginUser, getProfile, logoutUser };
+};

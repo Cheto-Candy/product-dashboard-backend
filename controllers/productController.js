@@ -73,11 +73,26 @@ const createProduct = async (req, res) => {
 // ========================
 const getProducts = async (req, res) => {
   try {
-    const products = await Product.findAll();
+    // query params
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
+
+    // offset calculation
+    const offset = (page - 1) * limit;
+
+    // get paginated data
+    const { count, rows } = await Product.findAndCountAll({
+      limit,
+      offset,
+      order: [["id", "DESC"]],
+    });
 
     return res.json({
       success: true,
-      data: products,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalProducts: count,
+      data: rows,
     });
 
   } catch (error) {
